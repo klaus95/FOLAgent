@@ -245,7 +245,7 @@ def isUnderObstacle(list, agentPos):
 #Get frame number
 #ale.getFrameNumber()
 
-index = 0
+games = []
 # Play 10 episodes
 for episode in range(10):
     total_reward = 0
@@ -253,7 +253,7 @@ for episode in range(10):
         ale.getScreen(screen_data)
 
         agentPos = agentPosition()
-        position = invadorsPositions()    
+        position = invadorsPositions()
 
         if isUnderObstacle(getObstaclePositions(), ):
             legal_actions = [left, right]
@@ -283,3 +283,10 @@ for episode in range(10):
         total_reward += reward
     print('Episode %d ended with score: %d' % (episode, total_reward))
     ale.reset_game()
+
+"""
+f = open("randomWithObstacleAvoidance.txt", "w")
+
+for num in games:
+     f.write(str(num) + "\n")
+"""
