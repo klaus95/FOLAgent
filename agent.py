@@ -208,8 +208,9 @@ def eleminateUnreachableInvadors(invadors, obstacles):
 def getClosestAlien(positions, agentPos):
     minDist = 1000
     index = -1
-    for currentAlien in positions:
-        if abs(currentAlien - agentPos) < minDist:
+    for (currentMin,currentMax) in positions:
+        currentMid = (currentMin + currentMax) / 2
+        if abs(currentMid - agentPos) < minDist:
             minDist = abs(currentAlien - agentPos)
             index = positions.index(currentAlien)
     return posistions[index]
@@ -253,9 +254,11 @@ for episode in range(10):
         ale.getScreen(screen_data)
 
         agentPos = agentPosition()
-        position = invadorsPositions()
+        obstacles = getObstaclePositions()
+        invadors = invadorsPositions()
+        position = eleminateUnreachableInvadors(invadors, obstacles)
 
-        if isUnderObstacle(getObstaclePositions(), ):
+        if isUnderObstacle(obstacles, agentPos):
             legal_actions = [left, right]
         elif isOnLeftEdge():
             legal_actions = [right, rightshoot]
