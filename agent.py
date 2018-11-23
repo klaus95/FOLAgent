@@ -213,12 +213,13 @@ def getClosestAlien(positions, agentPos):
         if abs(currentMid - agentPos) < minDist:
             minDist = abs(currentAlien - agentPos)
             index = positions.index(currentAlien)
-    return posistions[index]
+    return positions[index]
 
 def goTowardsAlien(indexAlien, agentPos):
-    if (indexAlien > agentPos):
+    mid = (indexAlien[0] + indexAlien[1]) / 2 
+    if (mid > agentPos):
         return right
-    if (indexAlien < agentPos):
+    if (mid < agentPos):
         return left
     return shoot
 
