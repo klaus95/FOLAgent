@@ -59,7 +59,7 @@ def printState():
 """
 for x in range (0, h):
     for y in range (0, w):
-	screen_data[x*y]
+    screen_data[x*y]
     print "\n"
 """
 
@@ -190,6 +190,25 @@ def getObstaclePositions():
 
     return positions
 
+def getClosestAlien(positions, agentPos):
+    minDist = 1000
+    index = -1
+    for currentAlien in positions:
+        if abs(currentAlien - agentPos) < minDist:
+            minDist = abs(currentAlien - agentPos)
+            index = positions.index(currentAlien)
+    return posistions[index]
+
+def goTowardsAlien(indexAlien, agentPos):
+    if (indexAlien > agentPos):
+        return right
+    if (indexAlien < agentPos):
+        return left
+    return shoot
+
+
+
+
 def isOnLeftEdge():
     rowStart = (194 * 160) + 34
     if (screen_data[rowStart] == 196) or (screen_data[rowStart] == 194):
@@ -220,8 +239,8 @@ for episode in range(10):
     total_reward = 0
     while not ale.game_over():
         ale.getScreen(screen_data)
-
-        if isUnderObstacle(getObstaclePositions(), agentPosition()):
+        agentPos = agentPosition()
+        if isUnderObstacle(getObstaclePositions(), ):
             legal_actions = [left, right, idle]
             print "under obstacle"
         elif isOnLeftEdge():
@@ -241,7 +260,8 @@ for episode in range(10):
         #time.sleep(1)                      #slow frame rate to 1 sec/frame
 
         #print movementDirection(),         #returns the movement direction
-        #position = invadorsPositions()     #returns position of the bottom row of aliens
+        position = invadorsPositions()     #returns position of the bottom row of aliens
+
         #print getObstaclePositions()       #returns obstacles position
         #print numberOfInvadors(position)   #returns number of invadors in the bottom line
         #print position
