@@ -190,6 +190,21 @@ def getObstaclePositions():
 
     return positions
 
+def eleminateUnreachableInvadors(invadors, obstacles):
+    newList = []
+    for (l,r) in invadors:
+        limits = False
+        object = False
+        for (lo,lr) in obstacles:
+            if (l < lo and r > lo) or (l < lr and r > lr):
+                object = True
+                break
+        if r >= 37 and l <= 120:
+            limits = True
+        if (limits and object):
+            newList.append((l,r))
+    return newList
+
 def getClosestAlien(positions, agentPos):
     minDist = 1000
     index = -1
@@ -205,9 +220,6 @@ def goTowardsAlien(indexAlien, agentPos):
     if (indexAlien < agentPos):
         return left
     return shoot
-
-
-
 
 def isOnLeftEdge():
     rowStart = (194 * 160) + 34
@@ -239,16 +251,16 @@ for episode in range(10):
     total_reward = 0
     while not ale.game_over():
         ale.getScreen(screen_data)
+
         agentPos = agentPosition()
+        position = invadorsPositions()    
+
         if isUnderObstacle(getObstaclePositions(), ):
-            legal_actions = [left, right, idle]
-            print "under obstacle"
+            legal_actions = [left, right]
         elif isOnLeftEdge():
-            legal_actions = [right, idle, rightshoot]
-            print "left edge"
+            legal_actions = [right, rightshoot]
         elif isOnRightEdge():
-            legal_actions = [left, idle, leftshoot]
-            print "right edge"
+            legal_actions = [left, leftshoot]
         else:
             legal_actions = ale.getMinimalActionSet()
 
@@ -260,7 +272,6 @@ for episode in range(10):
         #time.sleep(1)                      #slow frame rate to 1 sec/frame
 
         #print movementDirection(),         #returns the movement direction
-        position = invadorsPositions()     #returns position of the bottom row of aliens
 
         #print getObstaclePositions()       #returns obstacles position
         #print numberOfInvadors(position)   #returns number of invadors in the bottom line
