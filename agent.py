@@ -42,39 +42,33 @@ screen_data = np.empty(w*h, dtype=np.uint8)
 ale.getScreen(screen_data)
 
 #Write screen_data matrix to a file
-def printState():
-    f = open("out.txt", "w")
+def printState(index):
+    f = open("out" + str(index) + ".txt", "w")
     index = 0
     for x in screen_data:
-        if x > 0:
-            f.write(str(1))
-        else:
-            f.write(str(x))
+        f.write(str(x) + " ")
         index += 1
         if index == w:
             f.write("\n")
             index = 0
 
-#Print screen_data matrix
-"""
-for x in range (0, h):
-    for y in range (0, w):
-    screen_data[x*y]
-    print "\n"
-"""
-
+#Usually lowestRow = 184
+#21 and 115
 def bottomRowOfInvadors():
     row = 0
     colomun = 0
-    bottomLeft = (184 * 160) + 21
+    bottomLeft = (184 * 160) + 37
     index = bottomLeft
 
     while True:
-        if screen_data[index] == 20:
+        if (screen_data[index] == 20) or (screen_data[index] == 18):
             break
         index += 1
         colomun += 1
-        if colomun == 116:
+        if row > 116:
+            #special case (there is only one invador on the game)
+            break
+        if colomun >= 78:
             colomun = 0
             row += 1
             index = bottomLeft - (row * 160)
@@ -96,7 +90,7 @@ def xPositionOfBottomInvadors():
     index = ((bottomRow - 1) * 160) - row * 160
     distance = 0
     while row < 10:
-        if (screen_data[index] == 20):
+        if (screen_data[index] == 20) or (screen_data[index] == 18):
             distances.append((distance, (bottomRow - row)))
             row += 1
             index = ((bottomRow - 1) * 160) - row * 160
@@ -112,7 +106,7 @@ def invadorsPositions():
     index = ((row - 1) * 160) + distance
     max = ((row - 1) * 160) + 138
     while index < max:
-        if screen_data[index] == 20:
+        if (screen_data[index] == 20) or (screen_data[index] == 18):
             position.append((invadorsDistances, invadorsDistances + 10))
         index += 16
         invadorsDistances += 16
@@ -145,23 +139,6 @@ def numberOfInvadors(list):
     else:
         return len(list)
 
-def movementDirection():
-    startIndex = 31*160 + 23
-    leftIndex = 0
-    while leftIndex < 154:
-        if (screen_data[startIndex] == 20):
-            return "Directions changed to right\n"
-        leftIndex += 1
-        startIndex += 160
-    startIndex = 31*160 + 136
-    rightIndex = 0
-    while rightIndex < 154:
-        if (screen_data[startIndex] == 20):
-            return "Directions changed to left\n"
-        rightIndex += 1
-        startIndex += 160
-    return "No change"
-
 def getObstaclePositions():
     initialPosition = (174 * 160)
     positions = []
@@ -190,38 +167,23 @@ def getObstaclePositions():
 
     return positions
 
-def eleminateUnreachableInvadors(invadors, obstacles):
-    newList = []
-    for (l,r) in invadors:
-        limits = False
-        object = False
-        for (lo,lr) in obstacles:
-            if (l < lo and r > lo) or (l < lr and r > lr):
-                object = True
-                break
-        if r >= 37 and l <= 120:
-            limits = True
-        if (limits and object):
-            newList.append((l,r))
-    return newList
+def movementDirection(movement):
+    startIndex = 31*160 + 23
+    leftIndex = 0
+    while leftIndex < 154:
+        if (screen_data[startIndex] == 20) or (screen_data[startIndex] == 18): #apparantly sometimes aliens have color number 18 too
+            return "right"
+        leftIndex += 1
+        startIndex += 160
+    startIndex = 31*160 + 136
+    rightIndex = 0
+    while rightIndex < 154:
+        if (screen_data[startIndex] == 20) or (screen_data[startIndex] == 18):
+            return "left"
+        rightIndex += 1
+        startIndex += 160
+    return movement
 
-def getClosestAlien(positions, agentPos):
-    minDist = 1000
-    index = -1
-    for (currentMin,currentMax) in positions:
-        currentMid = (currentMin + currentMax) / 2
-        if abs(currentMid - agentPos) < minDist:
-            minDist = abs(currentAlien - agentPos)
-            index = positions.index(currentAlien)
-    return positions[index]
-
-def goTowardsAlien(indexAlien, agentPos):
-    mid = (indexAlien[0] + indexAlien[1]) / 2 
-    if (mid > agentPos):
-        return right
-    if (mid < agentPos):
-        return left
-    return shoot
 
 def isOnLeftEdge():
     rowStart = (194 * 160) + 34
@@ -244,9 +206,75 @@ def isUnderObstacle(list, agentPos):
             return True
     return False
 
+def eleminateUnreachableInvadors(invadors, obstacles, movement):
+    newList = []
+    for (l,r) in invadors:
+        limits = False
+        object = False
+        mid = (l+r)/2
+        for (lo,lr) in obstacles:
+            if movement == "right":
+                if not (mid < lr and lo < r):
+                    object = True
+                    break
+            else:
+                if not (l < lr and lo < mid):
+                    object = True
+                    break
+        if r >= 37 and l <= 120:
+            limits = True
+        if (limits):
+            newList.append((l,r))
+    return newList
+
+def getClosestAlien(positions, agent):
+    if positions == []:
+        return -1
+    (l,r) = agent
+    agentPos = (l+r)/2
+    minDist = 1000
+    index = -1
+    for (currentMin,currentMax) in positions:
+        currentMid = (currentMin + currentMax) / 2
+        if abs(currentMid - agentPos) < minDist:
+            minDist = abs(currentMid - agentPos)
+            index = (currentMin,currentMax)
+    return index
+
+def goTowardsAlien(indexAlien, agent, movement):
+    (l,r) = agent
+    agentPos = (l+r)/2
+    if indexAlien == -1:
+        return idle
+    (al,ar) = indexAlien
+    mid = (al + ar) / 2
+    if movement == "right":
+        if agentPos >= mid and agentPos <= ar:
+            return shoot
+        elif agentPos <= mid:
+            return right
+        elif agentPos >= ar:
+            return left
+    else:
+        if agentPos > al:   #changed this to position itself better before shooting and it has better results
+            return left
+        elif agentPos <= mid and agentPos >= al:
+            return leftshoot
+        elif agentPos <= al:
+            return right
+
+    """
+    if (mid > agentPos):
+        return right
+    if (mid < agentPos):
+        return left
+    return shoot
+    """
+
 #Get frame number
 #ale.getFrameNumber()
 
+movement = "right"
 games = []
 # Play 10 episodes
 for episode in range(10):
@@ -254,10 +282,13 @@ for episode in range(10):
     while not ale.game_over():
         ale.getScreen(screen_data)
 
+        movement = movementDirection(movement)
         agentPos = agentPosition()
         obstacles = getObstaclePositions()
         invadors = invadorsPositions()
-        position = eleminateUnreachableInvadors(invadors, obstacles)
+        position = eleminateUnreachableInvadors(invadors, obstacles, movement)
+
+        print position
 
         if isUnderObstacle(obstacles, agentPos):
             legal_actions = [left, right]
@@ -268,7 +299,12 @@ for episode in range(10):
         else:
             legal_actions = ale.getMinimalActionSet()
 
-        a = legal_actions[randrange(len(legal_actions))]
+        #a = legal_actions[randrange(len(legal_actions))]
+        a = goTowardsAlien(getClosestAlien(position, agentPos), agentPos, movement)
+
+        #print fr
+        #print bottomRowOfInvadors()
+
 
         #if ale.getFrameNumber() > 130:
             #printState()
@@ -286,11 +322,10 @@ for episode in range(10):
         reward = ale.act(a);
         total_reward += reward
     print('Episode %d ended with score: %d' % (episode, total_reward))
+    games.append(total_reward)
     ale.reset_game()
 
-"""
-f = open("randomWithObstacleAvoidance.txt", "w")
+f = open("logic.txt", "w")
 
 for num in games:
      f.write(str(num) + "\n")
-"""
