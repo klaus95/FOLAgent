@@ -90,6 +90,8 @@ def xPositionOfBottomInvadors():
     index = ((bottomRow - 1) * 160) - row * 160
     distance = 0
     while row < 10:
+        if index > 33598:
+            return (-1, -1)
         if (screen_data[index] == 20) or (screen_data[index] == 18):
             distances.append((distance, (bottomRow - row)))
             row += 1
@@ -102,6 +104,8 @@ def xPositionOfBottomInvadors():
 def invadorsPositions():
     position = []
     (distance, row) = xPositionOfBottomInvadors()
+    if distance == -1 and row == -1:
+        return []
     invadorsDistances = distance
     index = ((row - 1) * 160) + distance
     max = ((row - 1) * 160) + 138
@@ -241,6 +245,22 @@ def getClosestAlien(positions, agent):
             index = (currentMin,currentMax)
     return index
 
+def trackBullets(agent):
+    bullets = []
+    (l,r) = agent
+    colomun = 0
+    while colomun < (10 + r - l):
+        bottomIndex = ((194*160) + l - 5 + colomun)
+        row = 0
+        while row < 20:
+            if (screen_data[bottomIndex] == 4):
+                bullets.append(colomun + l - 5)
+                break
+            row += 1
+            bottomIndex -= 160
+        colomun += 1
+    return bullets
+
 def goTowardsAlien(indexAlien, agent, movement):
     (l,r) = agent
     agentPos = (l+r)/2
@@ -287,8 +307,33 @@ for episode in range(10):
         obstacles = getObstaclePositions()
         invadors = invadorsPositions()
         position = eleminateUnreachableInvadors(invadors, obstacles, movement)
+        bullets = trackBullets(agentPosition())
 
-        print position
+        if bullets:
+            (l,r) = agentPos
+            mid = (l+r)/2
+            if bullets[0] < mid:
+                a = right
+                reward = ale.act(a);
+                total_reward += reward
+                continue
+            elif bullets[0] > mid:
+                a = left
+                reward = ale.act(a);
+                total_reward += reward
+                continue
+            else:
+                if movement == "right":
+                    a = right
+                    reward = ale.act(a);
+                    total_reward += reward
+                    continue
+                else:
+                    a = left
+                    reward = ale.act(a);
+                    total_reward += reward
+                    continue
+
 
         if isUnderObstacle(obstacles, agentPos):
             legal_actions = [left, right]
@@ -305,9 +350,8 @@ for episode in range(10):
         #print fr
         #print bottomRowOfInvadors()
 
-
-        #if ale.getFrameNumber() > 130:
-            #printState()
+        #if ale.getFrameNumber() > 140:
+            #printState(ale.getFrameNumber())
 
         #time.sleep(1)                      #slow frame rate to 1 sec/frame
 
