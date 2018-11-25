@@ -53,11 +53,12 @@ def printState(index):
             index = 0
 
 #Usually lowestRow = 184
-#21 and 115
-def bottomRowOfInvadors():
+#21 and 115 - very old
+#37 and 78 - old
+def bottomRowOfInvadors(l,r):
     row = 0
     colomun = 0
-    bottomLeft = (184 * 160) + 37
+    bottomLeft = (184 * 160) + l
     index = bottomLeft
 
     while True:
@@ -68,7 +69,7 @@ def bottomRowOfInvadors():
         if row > 116:
             #special case (there is only one invador on the game)
             break
-        if colomun >= 78:
+        if colomun >= r:
             colomun = 0
             row += 1
             index = bottomLeft - (row * 160)
@@ -83,8 +84,8 @@ def findMin(array):
         index += 1
     return min
 
-def xPositionOfBottomInvadors():
-    bottomRow = bottomRowOfInvadors()
+def xPositionOfBottomInvadors(l,r):
+    bottomRow = bottomRowOfInvadors(l,r)
     distances = []
     row = 0
     index = ((bottomRow - 1) * 160) - row * 160
@@ -101,9 +102,9 @@ def xPositionOfBottomInvadors():
         distance += 1
     return findMin(distances)
 
-def invadorsPositions():
+def invadorsPositions(l,r):
     position = []
-    (distance, row) = xPositionOfBottomInvadors()
+    (distance, row) = xPositionOfBottomInvadors(l,r)
     if distance == -1 and row == -1:
         return []
     invadorsDistances = distance
@@ -175,7 +176,7 @@ def movementDirection(movement):
     startIndex = 31*160 + 23
     leftIndex = 0
     while leftIndex < 154:
-        if (screen_data[startIndex] == 20) or (screen_data[startIndex] == 18): #apparantly sometimes aliens have color number 18 too
+        if (screen_data[startIndex] == 20) or (screen_data[startIndex] == 18):
             return "right"
         leftIndex += 1
         startIndex += 160
@@ -210,24 +211,10 @@ def isUnderObstacle(list, agentPos):
             return True
     return False
 
-def eleminateUnreachableInvadors(invadors, obstacles, movement):
+def eleminateUnreachableInvadors(invadors):
     newList = []
     for (l,r) in invadors:
-        limits = False
-        object = False
-        mid = (l+r)/2
-        for (lo,lr) in obstacles:
-            if movement == "right":
-                if not (mid < lr and lo < r):
-                    object = True
-                    break
-            else:
-                if not (l < lr and lo < mid):
-                    object = True
-                    break
         if r >= 37 and l <= 120:
-            limits = True
-        if (limits):
             newList.append((l,r))
     return newList
 
@@ -276,100 +263,86 @@ def goTowardsAlien(indexAlien, agent, movement):
         elif agentPos >= ar:
             return left
     else:
-        if agentPos > al:   #changed this to position itself better before shooting and it has better results
+        if agentPos > al:
             return left
         elif agentPos <= mid and agentPos >= al:
             return leftshoot
         elif agentPos <= al:
             return right
 
-    """
-    if (mid > agentPos):
-        return right
-    if (mid < agentPos):
-        return left
-    return shoot
-    """
+def applyAction(action):
+    return ale.act(action)
 
-#Get frame number
-#ale.getFrameNumber()
-
-movement = "right"
-games = []
 # Play 10 episodes
 for episode in range(10):
+
     total_reward = 0
+    isOneOnOne = False
+    movement = "right"
+
     while not ale.game_over():
+
         ale.getScreen(screen_data)
 
-        movement = movementDirection(movement)
-        agentPos = agentPosition()
-        obstacles = getObstaclePositions()
-        invadors = invadorsPositions()
-        position = eleminateUnreachableInvadors(invadors, obstacles, movement)
-        bullets = trackBullets(agentPosition())
+        if not isOneOnOne:
+            movement = movementDirection(movement)
+            agentPos = agentPosition()
+            invadors = invadorsPositions(37,78)
+            position = eleminateUnreachableInvadors(invadors)
+            bullets = trackBullets(agentPosition())
 
-        if bullets:
-            (l,r) = agentPos
-            mid = (l+r)/2
-            if bullets[0] < mid:
-                a = right
-                reward = ale.act(a);
-                total_reward += reward
-                continue
-            elif bullets[0] > mid:
-                a = left
-                reward = ale.act(a);
-                total_reward += reward
-                continue
-            else:
-                if movement == "right":
-                    a = right
-                    reward = ale.act(a);
-                    total_reward += reward
+            if bullets:
+                (l,r) = agentPos
+                mid = (l+r)/2
+                if bullets[0] < mid:
+                    total_reward += applyAction(right)
+                    continue
+                elif bullets[0] > mid:
+                    total_reward += applyAction(left)
                     continue
                 else:
-                    a = left
-                    reward = ale.act(a);
-                    total_reward += reward
-                    continue
+                    if movement == "right":
+                        total_reward += applyAction(right)
+                        continue
+                    else:
+                        total_reward += applyAction(left)
+                        continue
 
+            a = goTowardsAlien(getClosestAlien(position, agentPos), agentPos, movement)
 
-        if isUnderObstacle(obstacles, agentPos):
-            legal_actions = [left, right]
-        elif isOnLeftEdge():
-            legal_actions = [right, rightshoot]
-        elif isOnRightEdge():
-            legal_actions = [left, leftshoot]
+            if a == idle:
+                isOneOnOne = True #we are left with only one invador in the game
+            else:
+                total_reward += applyAction(a)
         else:
-            legal_actions = ale.getMinimalActionSet()
+            # --------------------------- Strategy for the last invador -----------------------
+            lastInvadorPosition = invadorsPositions(21,115) #Get the position of the last invador
 
-        #a = legal_actions[randrange(len(legal_actions))]
-        a = goTowardsAlien(getClosestAlien(position, agentPos), agentPos, movement)
+            #Check if you killed the last invador (If you win, the game will crash if you don't do this)
+            if lastInvadorPosition:
+                (invadorLeft, invadorRight) = lastInvadorPosition[0]
+            else:
+                total_reward += applyAction(idle)
+                isOneOnOne = False      #Makes sure that you will NOT start the new game in one-to-one mode
+                continue
 
-        #print fr
-        #print bottomRowOfInvadors()
+            (agentLeft, agentRight) = agentPosition()
+            movement = movementDirection(movement)
 
-        #if ale.getFrameNumber() > 140:
-            #printState(ale.getFrameNumber())
+            #If you want to change the strategy for the last invador, change from this point on
+            if invadorLeft >= agentRight:
+                if movement == "left":
+                    if (agentLeft + agentRight)/2 > (invadorLeft - 5):
+                        total_reward += applyAction(shoot)
+            elif invadorRight <= agentLeft:
+                if movement == "right":
+                    if (agentLeft + agentRight)/2 < (invadorRight + 5):
+                        total_reward += applyAction(shoot)
+            else:
+                 total_reward += applyAction(idle)
+            # ---------------------------------------------------------------------------------
+            #Makes sure that it will return an action even if you don't catch all the cases
+            total_reward += applyAction(idle)
 
-        #time.sleep(1)                      #slow frame rate to 1 sec/frame
-
-        #print movementDirection(),         #returns the movement direction
-
-        #print getObstaclePositions()       #returns obstacles position
-        #print numberOfInvadors(position)   #returns number of invadors in the bottom line
-        #print position
-        #print agentPos()                    #returns agent's position
-
-        # Apply an action and get the resulting reward
-        reward = ale.act(a);
-        total_reward += reward
     print('Episode %d ended with score: %d' % (episode, total_reward))
-    games.append(total_reward)
     ale.reset_game()
-
-f = open("logic.txt", "w")
-
-for num in games:
-     f.write(str(num) + "\n")
